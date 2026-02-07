@@ -1,0 +1,11 @@
+name = "v2ray-sub-worker"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare Pages configuration
+# No KV, D1, or special bindings needed - zero config!
+# Deploy: `npm run build && npx wrangler pages deploy dist`
+# Or connect your GitHub repo in Cloudflare Dashboard
+
+[vars]
+# Add environment variables here if needed
