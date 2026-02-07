@@ -1,18 +1,20 @@
 name = "v2ray-sub-worker"
+main = "dist/_worker.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Cloudflare Pages configuration
-# Zero config - no KV, D1, R2, or special bindings needed!
-#
+[assets]
+directory = "./dist"
+
 # Deploy methods:
-#   1. CLI:    npm run build && npx wrangler pages deploy dist
-#   2. GitHub: Connect repo in Cloudflare Dashboard > Workers & Pages
-#   3. Upload: Build locally, upload dist/ folder in Dashboard
+#   1. Workers (wrangler deploy):  npm run build && npx wrangler deploy
+#   2. Pages (wrangler pages):     npm run build && npx wrangler pages deploy dist
+#   3. GitHub: Connect repo in Cloudflare Dashboard > Workers & Pages
 #
 # Build settings (for Cloudflare Dashboard):
 #   Build command:    npm run build
-#   Output directory: dist
+#   Build output directory: dist
+#   Deploy command:   npx wrangler deploy
 
 [vars]
 # Add environment variables here if needed
