@@ -6,10 +6,11 @@ import path from "path";
 
 export default defineConfig(({ mode }) => {
   if (mode === "client") {
-    // Build client (React SPA) → dist/
+    // Build client (React SPA) -> dist/
     return {
       plugins: [react(), tailwindcss()],
       root: "src/client",
+      publicDir: "public",
       resolve: {
         alias: {
           "@client": path.resolve(__dirname, "src/client"),
@@ -25,12 +26,11 @@ export default defineConfig(({ mode }) => {
             assetFileNames: "assets/[name]-[hash].[ext]",
           },
         },
-        copyPublicDir: false,
       },
     };
   }
 
-  // Build server (Hono → Cloudflare Pages Function) → dist/_worker.js
+  // Build server (Hono -> Cloudflare Pages Function) -> dist/_worker.js
   return {
     plugins: [
       build({

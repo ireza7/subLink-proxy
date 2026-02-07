@@ -1,16 +1,29 @@
 {
   "name": "v2ray-sub-worker",
   "version": "1.0.0",
-  "description": "V2Ray Subscription Proxy & Toolkit - Deploy on Cloudflare Workers",
+  "description": "V2Ray Subscription Proxy & Toolkit - Deploy on Cloudflare Workers/Pages. Proxy, convert, merge, and manage V2Ray subscriptions.",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build --mode client && vite build",
-    "preview": "npm run build && wrangler dev",
-    "deploy": "npm run build && wrangler deploy",
+    "preview": "npm run build && wrangler pages dev dist",
+    "deploy": "npm run build && wrangler pages deploy dist",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["v2ray", "subscription", "proxy", "cloudflare-workers", "hono", "react"],
+  "keywords": [
+    "v2ray",
+    "subscription",
+    "proxy",
+    "cloudflare-workers",
+    "cloudflare-pages",
+    "hono",
+    "react",
+    "vless",
+    "vmess",
+    "trojan",
+    "clash",
+    "singbox"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {

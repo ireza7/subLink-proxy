@@ -3,9 +3,17 @@ compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Pages configuration
-# No KV, D1, or special bindings needed - zero config!
-# Deploy: `npm run build && npx wrangler pages deploy dist`
-# Or connect your GitHub repo in Cloudflare Dashboard
+# Zero config - no KV, D1, R2, or special bindings needed!
+#
+# Deploy methods:
+#   1. CLI:    npm run build && npx wrangler pages deploy dist
+#   2. GitHub: Connect repo in Cloudflare Dashboard > Workers & Pages
+#   3. Upload: Build locally, upload dist/ folder in Dashboard
+#
+# Build settings (for Cloudflare Dashboard):
+#   Build command:    npm run build
+#   Output directory: dist
 
 [vars]
 # Add environment variables here if needed
+# Example: CUSTOM_HEADER = "my-value"

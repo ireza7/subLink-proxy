@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchSub, SubResponse, SubConfig } from "../lib/api";
-import { copyToClipboard } from "../lib/utils";
+import { copyToClipboard, generateProxyLink } from "../lib/utils";
 import { ConfigCard } from "../components/ConfigCard";
 import { SubInfoBar } from "../components/SubInfoBar";
 
@@ -12,8 +12,10 @@ export function SubscriptionPage({ onToast }: Props) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SubResponse | null>(null);
+  const [rawContent, setRawContent] = useState("");
   const [filter, setFilter] = useState("");
   const [exportFormat, setExportFormat] = useState("json");
+  const [protocolFilter, setProtocolFilter] = useState("all");
 
   // Check URL params on mount (for /?link=... support)
   useEffect(() => {
@@ -41,9 +43,20 @@ export function SubscriptionPage({ onToast }: Props) {
 
     setLoading(true);
     try {
+      // Fetch JSON for display
       const result = await fetchSub(targetUrl, "json");
       setData(result as SubResponse);
-      onToast(`${(result as SubResponse).count} کانفیگ دریافت شد`, "success");
+
+      // Also fetch raw to have URIs for copy
+      const rawResult = await fetchSub(targetUrl, "raw");
+      if (typeof rawResult === "string") {
+        setRawContent(rawResult);
+      }
+
+      onToast(
+        `${(result as SubResponse).count} کانفیگ دریافت شد`,
+        "success"
+      );
     } catch (err) {
       onToast(
         `خطا: ${err instanceof Error ? err.message : "مشکل ناشناخته"}`,
@@ -75,27 +88,61 @@ export function SubscriptionPage({ onToast }: Props) {
 
   function handleGenerateProxyLink() {
     if (!url.trim()) return;
-    const base = window.location.origin;
-    const proxyLink = `${base}/sub?link=${encodeURIComponent(url)}&format=${exportFormat}`;
+    const proxyLink = generateProxyLink(url, exportFormat);
     copyToClipboard(proxyLink);
     onToast("لینک پروکسی سابسکریپشن کپی شد!", "success");
   }
 
+  // Parse raw content to get individual URIs
+  function getRawUris(): string[] {
+    if (!rawContent) return [];
+    let text = rawContent.trim();
+    // Try base64 decode
+    try {
+      const decoded = atob(
+        text.replace(/-/g, "+").replace(/_/g, "/")
+      );
+      if (
+        decoded.includes("vmess://") ||
+        decoded.includes("vless://") ||
+        decoded.includes("trojan://") ||
+        decoded.includes("ss://")
+      ) {
+        text = decoded;
+      }
+    } catch {
+      // not base64
+    }
+    return text.split(/\r?\n/).filter((l) => l.trim());
+  }
+
+  const rawUris = getRawUris();
+
+  // Get unique protocols for filter
+  const protocols = data
+    ? [...new Set(data.configs.map((c) => c.protocol))]
+    : [];
+
   const filteredConfigs: SubConfig[] = data
-    ? data.configs.filter(
-        (c) =>
+    ? data.configs.filter((c, i) => {
+        const matchesText =
           !filter ||
           c.name.toLowerCase().includes(filter.toLowerCase()) ||
           c.protocol.toLowerCase().includes(filter.toLowerCase()) ||
-          c.address.toLowerCase().includes(filter.toLowerCase())
-      )
+          c.address.toLowerCase().includes(filter.toLowerCase());
+        const matchesProtocol =
+          protocolFilter === "all" || c.protocol === protocolFilter;
+        return matchesText && matchesProtocol;
+      })
     : [];
 
   return (
     <div className="space-y-6">
       {/* Input Section */}
       <div className="bg-surface-light rounded-xl border border-gray-700/50 p-5">
-        <h2 className="text-base font-bold text-white mb-4">دریافت سابسکریپشن</h2>
+        <h2 className="text-base font-bold text-white mb-4">
+          دریافت سابسکریپشن
+        </h2>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <input
@@ -110,7 +157,7 @@ export function SubscriptionPage({ onToast }: Props) {
           <button
             onClick={() => handleFetch()}
             disabled={loading}
-            className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
           >
             {loading ? (
               <>
@@ -127,8 +174,8 @@ export function SubscriptionPage({ onToast }: Props) {
         </div>
 
         {/* Export Row */}
-        <div className="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <label className="text-xs text-gray-400">فرمت خروجی:</label>
+        <div className="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
+          <label className="text-xs text-gray-400 shrink-0">فرمت خروجی:</label>
           <select
             value={exportFormat}
             onChange={(e) => setExportFormat(e.target.value)}
@@ -171,25 +218,60 @@ export function SubscriptionPage({ onToast }: Props) {
             <h3 className="text-base font-bold text-white">
               کانفیگ‌ها ({filteredConfigs.length}/{data.count})
             </h3>
-            <input
-              type="text"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="فیلتر بر اساس نام، پروتکل، آدرس..."
-              className="w-full sm:w-64 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary"
-            />
+            <div className="flex gap-2 flex-wrap items-center">
+              {/* Protocol Filter */}
+              {protocols.length > 1 && (
+                <div className="flex gap-1 flex-wrap">
+                  <button
+                    onClick={() => setProtocolFilter("all")}
+                    className={`text-xs px-2 py-1 rounded-md transition-colors ${
+                      protocolFilter === "all"
+                        ? "bg-primary text-white"
+                        : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    همه
+                  </button>
+                  {protocols.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setProtocolFilter(p)}
+                      className={`text-xs px-2 py-1 rounded-md transition-colors ${
+                        protocolFilter === p
+                          ? "bg-primary text-white"
+                          : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                      }`}
+                    >
+                      {p.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input
+                type="text"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="جستجو..."
+                className="w-full sm:w-48 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-primary"
+              />
+            </div>
           </div>
 
           {filteredConfigs.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredConfigs.map((config, i) => (
-                <ConfigCard
-                  key={i}
-                  config={config}
-                  index={i}
-                  onCopy={(msg) => onToast(msg, "success")}
-                />
-              ))}
+              {filteredConfigs.map((config, i) => {
+                // Find matching raw URI
+                const originalIndex = data.configs.indexOf(config);
+                return (
+                  <ConfigCard
+                    key={i}
+                    config={config}
+                    index={i}
+                    rawUri={rawUris[originalIndex]}
+                    onCopy={(msg) => onToast(msg, "success")}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
@@ -202,15 +284,30 @@ export function SubscriptionPage({ onToast }: Props) {
       {/* Empty State */}
       {!data && !loading && (
         <div className="text-center py-16 text-gray-500">
-          <div className="text-4xl mb-4">📡</div>
-          <h3 className="text-lg font-medium text-gray-400 mb-2">لینک سابسکریپشن خود را وارد کنید</h3>
-          <p className="text-sm">
-            لینک سابسکریپشن V2Ray خود را در بالا وارد کنید تا کانفیگ‌ها نمایش داده شوند
+          <div className="text-5xl mb-4">📡</div>
+          <h3 className="text-lg font-medium text-gray-400 mb-2">
+            لینک سابسکریپشن خود را وارد کنید
+          </h3>
+          <p className="text-sm max-w-md mx-auto">
+            لینک سابسکریپشن V2Ray خود را در بالا وارد کنید تا کانفیگ‌ها نمایش
+            داده شوند. همچنین می‌توانید از طریق لینک پروکسی مستقیم دسترسی داشته
+            باشید.
           </p>
           <div className="mt-6 p-4 bg-surface-light rounded-xl border border-gray-700/50 max-w-lg mx-auto text-right text-xs text-gray-400 space-y-2">
-            <p><strong className="text-gray-300">پشتیبانی از پروتکل‌ها:</strong> VMess, VLESS, Trojan, Shadowsocks, Hysteria2</p>
-            <p><strong className="text-gray-300">فرمت‌های خروجی:</strong> Clash, Sing-box, Surge, Quantumult X, JSON, Base64</p>
-            <p><strong className="text-gray-300">قابلیت پروکسی:</strong> لینک سابسکریپشن را از طریق Worker دریافت کنید</p>
+            <p>
+              <strong className="text-gray-300">پروتکل‌ها:</strong> VMess,
+              VLESS, Trojan, Shadowsocks, Hysteria2
+            </p>
+            <p>
+              <strong className="text-gray-300">خروجی‌ها:</strong> Clash,
+              Sing-box, Surge, Quantumult X, JSON, Base64
+            </p>
+            <p>
+              <strong className="text-gray-300">پروکسی مستقیم:</strong>{" "}
+              <code dir="ltr" className="text-accent text-xs bg-gray-800 px-1 rounded">
+                /sub?link=YOUR_URL&format=clash
+              </code>
+            </p>
           </div>
         </div>
       )}

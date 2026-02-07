@@ -17,6 +17,10 @@
 ::-webkit-scrollbar-thumb { background: var(--color-surface-lighter); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
 
+/* Hide scrollbar for tabs */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Textarea / Code blocks */
 .code-block {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
@@ -51,5 +55,17 @@
 }
 
 .animate-spin-slow {
-  animation: spin-slow 3s linear infinite;
+  animation: spin-slow 1s linear infinite;
+}
+
+/* Selection */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: white;
+}
+
+/* Focus ring */
+input:focus, textarea:focus, select:focus, button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
 }

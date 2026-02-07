@@ -15,6 +15,12 @@ export interface SubConfig {
   tls?: string;
   sni?: string;
   method?: string;
+  host?: string;
+  path?: string;
+  flow?: string;
+  fingerprint?: string;
+  alpn?: string;
+  password?: string;
   [key: string]: unknown;
 }
 
@@ -111,4 +117,50 @@ export async function parseUri(uri: string): Promise<SubConfig> {
   }
   const data = (await res.json()) as { config: SubConfig };
   return data.config;
+}
+
+export interface MergeResult {
+  totalConfigs: number;
+  duplicatesRemoved: number;
+  errors?: string[];
+  base64: string;
+  raw: string;
+  configs: SubConfig[];
+}
+
+export async function mergeSubscriptions(
+  urls: string[],
+  removeDuplicates = true
+): Promise<MergeResult> {
+  const res = await fetch(`${API_BASE}/tools/merge`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ urls, removeDuplicates }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Unknown" }));
+    throw new Error((err as { error: string }).error);
+  }
+  return res.json() as Promise<MergeResult>;
+}
+
+export interface CleanResult {
+  original: number;
+  cleaned: number;
+  removed: number;
+  base64: string;
+  raw: string;
+}
+
+export async function cleanConfigs(configs: string): Promise<CleanResult> {
+  const res = await fetch(`${API_BASE}/tools/clean`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ configs }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Unknown" }));
+    throw new Error((err as { error: string }).error);
+  }
+  return res.json() as Promise<CleanResult>;
 }
